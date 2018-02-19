@@ -2,7 +2,7 @@
 Master in Computer Vision - M5 Visual recognition
 
 ## Fork this project
-Fork this project to start your group project. Add robertbenavente and lluisgomez as contributors.
+Fork this project to start your group project. Add [robertbenavente](https://github.com/robertbenavente) and [lluisgomez](https://github.com/lluisgomez/) as contributors.
 
 ## Project description
 Download the [Overleaf document](https://www.overleaf.com/read/qrjbtzwtjhmx)
