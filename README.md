@@ -27,10 +27,10 @@ Download the [Overleaf document](https://www.overleaf.com/read/qrjbtzwtjhmx)
 
 ## Groups
 
- - Group 01 
-  - Francisco Roldán Sánchez
-  - Guillem Delgado Gonzalo
-  - Jordi Gené Mola 
+ - [Group 01](https://github.com/guillemdelgado/mcv-m5)
+     - Francisco Roldán Sánchez
+     - Guillem Delgado Gonzalo
+     - Jordi Gené Mola 
 
  - Group 02 
   - Roger Marí Molas
