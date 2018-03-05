@@ -17,7 +17,7 @@ import threading
 from keras import backend as K
 
 from tools.save_images import save_img2
-#from tools.yolo_utils import yolo_build_gt_batch
+from tools.yolo_utils import yolo_build_gt_batch
 
 def array_to_img(x, dim_ordering='default', scale=True):
     """Converts a 3D Numpy array to a PIL Image instance.

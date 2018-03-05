@@ -5,7 +5,7 @@ import numpy as np
 from keras.engine.training import GeneratorEnqueuer
 #from model_factory import Model_Factory
 from tools.save_images import save_img3
-#from tools.yolo_utils import *
+from tools.yolo_utils import *
 from keras.preprocessing import image
 """
 Interface for normal (one net) models and adversarial models. Objects of
@@ -106,21 +106,35 @@ class One_Net_Model(Model):
     def test(self, test_gen):
         if self.cf.test_model:
             print('\n > Testing the model...')
+
             # Load best trained model
+            print('\n > Loading model from '+self.cf.weights_test_file)
             self.model.load_weights(self.cf.weights_test_file)
 
-            # Evaluate model
-            start_time_global = time.time()
-            test_metrics = self.model.evaluate_generator(test_gen,
-                                                         steps=self.cf.dataset.n_images_test//self.cf.batch_size_test,
-                                                         max_queue_size=10,
-                                                         workers=1)
+            #if not self.cf.problem_type == 'detection':
+            if True:
+                # Evaluate model
+                start_time_global = time.time()
+                test_metrics = self.model.evaluate_generator(test_gen,
+                                                             steps=self.cf.dataset.n_images_test//self.cf.batch_size_test,
+                                                             max_queue_size=10,
+                                                             workers=1)
+    
+                total_time_global = time.time() - start_time_global
+                fps = float(self.cf.dataset.n_images_test) / total_time_global
+                s_p_f = total_time_global / float(self.cf.dataset.n_images_test)
+                print ('   Testing time: {}. FPS: {}. Seconds per Frame: {}'.format(total_time_global, fps, s_p_f))
+                metrics_dict = dict(zip(self.model.metrics_names, test_metrics))
+                print ('   Test metrics: ')
+                for k in metrics_dict.keys():
+                    print ('      {}: {}'.format(k, metrics_dict[k]))
+
             if self.cf.problem_type == 'detection':
                 # Dataset and the model used
                 dataset_name = self.cf.dataset_name 
                 #model_name = self.cf.model_name 
                 # Net output post-processing needs two parameters:
-                detection_threshold = 0.6 # Min probablity for a prediction to be considered
+                detection_threshold = 0.3 # Min probablity for a prediction to be considered
                 nms_threshold       = 0.2 # Non Maximum Suppression threshold
                 # IMPORTANT: the values of these two params will affect the final performance of the netwrok
                 #            you are allowed to find their optimal values in the validation/train sets
@@ -151,6 +165,7 @@ class One_Net_Model(Model):
                 ok = 0.
                 total_true = 0.
                 total_pred = 0.
+                start_time = time.time()
                 for i, img_path in enumerate(imfiles):
                     img = image.load_img(img_path, target_size=(input_shape[1], input_shape[2]))
                     img = image.img_to_array(img)
@@ -159,12 +174,9 @@ class One_Net_Model(Model):
                     img_paths.append(img_path)
                     
                     if len(img_paths)%chunk_size == 0 or i+1 == len(imfiles):
+                        print(str(i)+'/'+str(len(imfiles)))
                         inputs = np.array(inputs)
-                        start_time_batch = time.time()
-                        net_out = self.model.predict(inputs, batch_size = 16, verbose = 1)
-                        print ('{} images predicted in {:.5f} seconds. {:.5f} fps').format(len(inputs), 
-                               time.time() - start_time_batch, 
-                                (len(inputs)/(time.time() - start_time_batch)))
+                        net_out = self.model.predict(inputs, batch_size = self.cf.batch_size_test, verbose = 0)
                         # Find correct detections (per image)
                         for i, img_path in enumerate(img_paths):
                             boxes_pred = yolo_postprocess_net_out(net_out[i], priors, classes, detection_threshold, nms_threshold)
@@ -200,23 +212,18 @@ class One_Net_Model(Model):
                         inputs = []
                         img_paths = []
                     
-                        #print 'total_true:',total_true,' total_pred:',total_pred,' ok:',ok
-                        p = 0. if total_pred == 0 else (ok/total_pred)
-                        r = ok/total_true
-                        print('Precission = ' + str(p))
-                        print('Recall     = ' + str(r))
-                        f = 0. if (p + r) == 0 else (2*p*r/(p + r))
-                        print('F-score    = '+str(f))
+                print 'total_true:',total_true,' total_pred:',total_pred,' ok:',ok
+                p = 0. if total_pred == 0 else (ok/total_pred)
+                r = ok/total_true
+                print('Precission = ' + str(p))
+                print('Recall     = ' + str(r))
+                f = 0. if (p + r) == 0 else (2*p*r/(p + r))
+                print('F-score    = '+str(f))
+                print ('{} images predicted in {:.5f} seconds. {:.5f} fps').format(len(imfiles), 
+                       time.time() - start_time, 
+                        (len(imfiles)/(time.time() - start_time)))
     
     
-            total_time_global = time.time() - start_time_global
-            fps = float(self.cf.dataset.n_images_test) / total_time_global
-            s_p_f = total_time_global / float(self.cf.dataset.n_images_test)
-            print ('   Testing time: {}. FPS: {}. Seconds per Frame: {}'.format(total_time_global, fps, s_p_f))
-            metrics_dict = dict(zip(self.model.metrics_names, test_metrics))
-            print ('   Test metrics: ')
-            for k in metrics_dict.keys():
-                print ('      {}: {}'.format(k, metrics_dict[k]))
 
             if self.cf.problem_type == 'segmentation':
                 # Compute Jaccard per class
