@@ -1,7 +1,7 @@
 import os
 
 # Keras imports
-from metrics.metrics import cce_flatt, IoU, YOLOLoss, YOLOMetrics
+from metrics.metrics import jaccard_coef, cce_flatt, IoU, YOLOLoss, YOLOMetrics
 from keras import backend as K
 from keras.utils.vis_utils import plot_model
 
@@ -16,7 +16,7 @@ from models.vgg import build_vgg
 from models.yolo import build_yolo
 
 # Segmentation models
-#from models.fcn8 import build_fcn8
+from models.fcn8 import build_fcn8
 
 # Adversarial models
 #from models.adversarial_semseg import Adversarial_Semseg
@@ -65,8 +65,10 @@ class Model_Factory():
                     in_shape = (cf.target_size_train[0],
                                 cf.target_size_train[1],
                                 cf.dataset.n_channels)
-            loss = cce_flatt(cf.dataset.void_class, cf.dataset.cb_weights)
-            metrics = [IoU(cf.dataset.n_classes, cf.dataset.void_class)]
+            #loss = cce_flatt(cf.dataset.void_class, cf.dataset.cb_weights)
+            #metrics = [IoU(cf.dataset.n_classes, cf.dataset.void_class)]
+            loss='categorical_crossentropy'
+            metrics=['accuracy',jaccard_coef]
         else:
             raise ValueError('Unknown problem type')
         return in_shape, loss, metrics
@@ -79,7 +81,7 @@ class Model_Factory():
             if optimizer is None:
                 raise ValueError('optimizer can not be None')
 
-            in_shape, loss, metrics = self.basic_model_properties(cf, True)
+            in_shape, loss, metrics = self.basic_model_properties(cf, False)
             model = self.make_one_net_model(cf, in_shape, loss, metrics,
                                             optimizer)
 
@@ -105,7 +107,7 @@ class Model_Factory():
         if cf.model_name == 'fcn8':
             model = build_fcn8(in_shape, cf.dataset.n_classes, cf.weight_decay,
                                freeze_layers_from=cf.freeze_layers_from,
-                               path_weights=cf.load_imageNet)
+                               load_pretrained=cf.load_imageNet)
         elif cf.model_name == 'unet':
             model = build_unet(in_shape, cf.dataset.n_classes, cf.weight_decay,
                                freeze_layers_from=cf.freeze_layers_from,

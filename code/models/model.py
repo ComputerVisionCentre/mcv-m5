@@ -43,7 +43,7 @@ class One_Net_Model(Model):
             print('\n > Training the model...')
             hist = self.model.fit_generator(generator=train_gen,
                                             steps_per_epoch=self.cf.dataset.n_images_train//self.cf.batch_size_train,
-                                            nb_epoch=self.cf.n_epochs,
+                                            epochs=self.cf.n_epochs,
                                             verbose=1,
                                             callbacks=cb,
                                             validation_data=valid_gen,

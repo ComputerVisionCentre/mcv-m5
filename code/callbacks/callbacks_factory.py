@@ -17,9 +17,9 @@ class Callbacks_Factory():
         cb = []
 
         # Jaccard callback
-        if cf.dataset.class_mode == 'segmentation':
-            print('   Jaccard metric')
-            cb += [Jacc_new(cf.dataset.n_classes)]
+        #if cf.dataset.class_mode == 'segmentation':
+            #print('   Jaccard metric')
+            #cb += [Jacc_new(cf.dataset.n_classes)]
 
         # Save image results
         if cf.save_results_enabled:

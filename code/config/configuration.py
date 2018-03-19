@@ -98,9 +98,12 @@ class Configuration():
 
         # Plot metrics
         if cf.dataset.class_mode == 'segmentation':
-            cf.train_metrics = ['loss', 'acc', 'jaccard']
-            cf.valid_metrics = ['val_loss', 'val_acc', 'val_jaccard']
-            cf.best_metric = 'val_jaccard'
+            #cf.train_metrics = ['loss', 'acc', 'jaccard']
+            #cf.valid_metrics = ['val_loss', 'val_acc', 'val_jaccard']
+            #cf.best_metric = 'val_jaccard'
+            cf.train_metrics = ['loss', 'acc', 'jaccard_coef']
+            cf.valid_metrics = ['val_loss', 'val_acc', 'val_jaccard_coef']
+            cf.best_metric = 'val_jaccard_coef'
             cf.best_type = 'max'
         elif cf.dataset.class_mode == 'detection':
             # TODO detection : different nets may have other metrics

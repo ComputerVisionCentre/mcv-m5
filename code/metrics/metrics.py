@@ -8,6 +8,21 @@ else:
     import tensorflow as tf
     from tensorflow.python.framework import ops
 
+def jaccard_coef(y_true, y_pred, eps=1e-37):
+    y_pred = tf.one_hot(tf.argmax(y_pred,axis=2), tf.shape(y_pred)[2])
+    intersection = K.sum(y_true * y_pred, axis=(1))
+    union = K.sum(y_true, axis=(1)) + K.sum(y_pred, axis=(1)) - intersection
+    mean  = K.mean( (intersection ) / (union + eps), axis=(1))
+    mean  = tf.clip_by_value(mean, 0.0, 1.0)
+    return K.mean( mean, axis=0)
+
+def jaccard_coef_smooth(y_true, y_pred, smooth=0.0):
+    '''Average jaccard coefficient per batch.'''
+    intersection = K.sum(y_true * y_pred, axis=(1))
+    union = K.sum(y_true, axis=(1)) + K.sum(y_pred, axis=(1)) - intersection
+    mean  = K.mean( (intersection + smooth) / (union + smooth), axis=(1))
+    return K.mean( mean, axis=0)
+
 def cce_flatt(void_class, weights_class):
     def categorical_crossentropy_flatt(y_true, y_pred):
         '''Expects a binary class matrix instead of a vector of scalar classes.
