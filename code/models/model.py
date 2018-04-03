@@ -7,6 +7,7 @@ from keras.engine.training import GeneratorEnqueuer
 from tools.save_images import save_img3
 from tools.yolo_utils import *
 from keras.preprocessing import image
+import keras.backend as K
 """
 Interface for normal (one net) models and adversarial models. Objects of
 classes derived from Model are returned by method make() of the Model_Factory
@@ -61,41 +62,59 @@ class One_Net_Model(Model):
     # Predict the model
     def predict(self, test_gen, tag='pred'):
         if self.cf.pred_model:
-            print('Predict method not implemented.')
-            return
-            # TODO fix model predict method
+            # TODO model predict method for other tasks
             print('\n > Predicting the model...')
-            # Load best trained model
-            # self.model.load_weights(os.path.join(self.cf.savepath, "weights.hdf5"))
-            self.model.load_weights(self.cf.weights_file)
 
-            # Create a data generator
-            data_gen_queue, _stop, _generator_threads = GeneratorEnqueuer(self.test_gen, max_q_size=1)
+            if self.cf.problem_type == 'segmentation':
+                # Load best trained model
+                self.model.load_weights(self.cf.weights_file)
 
-            # Process the dataset
-            start_time = time.time()
-            for _ in range(int(math.ceil(self.cf.dataset.n_images_train/float(self.cf.batch_size_test)))):
+                # Create output directory
+                if not os.path.exists(os.path.join(self.cf.savepath,'Predictions')):
+                    os.makedirs(os.path.join(self.cf.savepath,'Predictions'))
 
-                # Get data for this minibatch
-                data = data_gen_queue.get()
-                x_true = data[0]
-                y_true = data[1].astype('int32')
+                # Create a data generator
+                enqueuer = GeneratorEnqueuer(test_gen,wait_time=0.05)
+                enqueuer.start(workers=1,max_queue_size=1)
+                output_generator = enqueuer.get()
 
-                # Get prediction for this minibatch
-                y_pred = self.model.predict(x_true)
+                # Process the dataset
+                start_time = time.time()
+                for i in range(int(math.ceil(self.cf.dataset.n_images_test/float(self.cf.batch_size_test)))):
 
-                # Compute the argmax
-                y_pred = np.argmax(y_pred, axis=1)
+                    # Get data for this minibatch
+                    data = next(output_generator)
+                    x_true = data[0]
+                    y_true = data[1].astype('int32')
 
-                # Reshape y_true
-                y_true = np.reshape(y_true, (y_true.shape[0], y_true.shape[2],
-                                             y_true.shape[3]))
+                    # Get prediction for this minibatch
+                    y_pred = self.model.predict(x_true)
 
-                save_img3(x_true, y_true, y_pred, self.cf.savepath, 0,
-                          self.cf.dataset.color_map, self.cf.dataset.classes, tag+str(_), self.cf.dataset.void_class)
+                    # Reshape y_true and compute the y_pred argmax
+                    if K.image_dim_ordering() == 'th':
+                        print('Predict method not implemented for th dim ordering.')
+                        return
+                    else:
+                        # Find the most probable class of each pixel
+                        y_pred = np.argmax(y_pred, axis=2)
+                        y_true = np.argmax(y_true, axis=2)
 
-            # Stop data generator
-            _stop.set()
+                        # Reshape from (?,172800) to (?, 360, 480)
+                        # print('Acc with shapes y_pred={} and y_true{}: {}'.format(y_pred.shape,y_true.shape,np.mean(np.ravel(y_pred==y_true))))
+                        y_true = np.reshape(y_true, (x_true.shape[0], x_true.shape[1], x_true.shape[2]))
+                        y_pred = np.reshape(y_pred, (x_true.shape[0], x_true.shape[1], x_true.shape[2]))
+                        # print('Acc with shapes y_pred={} and y_true{}: {}'.format(y_pred.shape,y_true.shape,np.mean(np.ravel(y_pred==y_true))))
+
+                    # Save output images
+                    save_img3(x_true, y_true, y_pred, os.path.join(self.cf.savepath,'Predictions'), 0,
+                              self.cf.dataset.color_map, self.cf.dataset.classes, tag + str(i), self.cf.dataset.void_class)
+
+                # Stop data generator
+                if enqueuer is not None:
+                    enqueuer.stop()
+            else:
+                print('Predict method not implemented.')
+                return
 
             total_time = time.time() - start_time
             fps = float(self.cf.dataset.n_images_test) / total_time
